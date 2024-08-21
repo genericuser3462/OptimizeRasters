@@ -5116,48 +5116,41 @@ class Compression(object):
         return self._call_external(args, name=sourcePath, method=TimeIt.Overview, store=self._base)
 
     @TimeIt.timeOperation
-    def _call_external(self, args, messageCallback=None, **kwargs):
+    def _call_external(self, args, max_number_attempts=5, retry_delay_seconds=1):
+        """
+        Typically runs gdal_translate.exe or gdaladdo.exe with the supplied arguments
+        Appends GDAL stdout to messages
+        If return code for output of subprocess.run is not 0 this indicates an error, so the code waits and retries
+        """
+
         if (CRUN_IN_AWSLAMBDA):
             tmpELF = '/tmp/{}'.format(os.path.basename(args[0]))
             args[0] = tmpELF
-        p = subprocess.Popen(' '.join(args), shell=True,
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        message = ''
-        messages = []
-        val = p.poll()
-        while (val is None):
-            time.sleep(0.5)
-            val = p.poll()
-            message = p.stdout.readline()
-            if (message):
-                messages.append(message.strip())
-        if (messages):
-            self.message('messages:')
-            for m in messages:
-                self.message(m)
-        if (not p.stderr):
-            return True
-        warnings = p.stderr.readlines()
-        if (warnings):
-            self.message('warnings/errors:')
-            is_error = False
-            for w in warnings:
-                w = w.strip()
-                if (isinstance(w, bytes)):
-                    w = bytes.decode(w)
-                if (not is_error):
-                    if (w.find('ERROR') >= 0):
-                        is_error = True
-                        if (w.find('ECW') >= 0 and
-                                self._base.isLinux()):   # temp fix to get rid of (no version information available) warnings for .so under linux
-                            is_error = False
-                self.message(w)
-                if (messageCallback):
-                    messageCallback(w)
-            if (is_error):
-                return False
-        return True
 
+        args = ' '.join(args)
+        self.message(rf"INFO: Compression._call_external({args})")
+
+        for attempt_number in range(max_number_attempts):
+            completedProcess = subprocess.run(args, capture_output=True)
+            if completedProcess.returncode == 0:
+                self.message(rf"INFO: GDAL succeeded after {attempt_number} attempts")
+                break
+
+            self.message(rf"INFO: Attempt {attempt_number}: GDAL error. stderr = {completedProcess.stderr}")
+
+            if attempt_number != max_number_attempts - 1:
+                self.message(rf"INFO: Retrying in {retry_delay_seconds} seconds")
+                time.sleep(retry_delay_seconds)
+                continue
+
+            raise subprocess.CalledProcessError(completedProcess.returncode, args, completedProcess.stderr)
+
+        self.message(rf"INFO: GDAL COMPRESSION succeeded after {attempt_number + 1} attempts")
+        messages = completedProcess.stdout.splitlines()
+        self.message('messages:')
+        [self.message(m) for m in messages]
+
+        return True
 
 class BundleMaker(Compression):
 
