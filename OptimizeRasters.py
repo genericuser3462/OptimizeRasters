@@ -5135,13 +5135,14 @@ class Compression(object):
 
         for attempt_number in range(max_number_attempts):
             completedProcess = subprocess.run(args, capture_output=True)
+            self.message(rf"INFO: Attempt {attempt_number} return code = {completedProcess.returncode}")
             if completedProcess.returncode == 0:
-                self.message(rf"INFO: GDAL succeeded after {attempt_number} attempts")
+                self.message(rf"INFO: subprocess succeeded after {attempt_number} attempts")
                 break
 
-            self.message(rf"INFO: Attempt {attempt_number}: GDAL error. stderr = {completedProcess.stderr}")
+            self.message(rf"return code indicates error. stderr = {completedProcess.stderr}")
 
-            if attempt_number != max_number_attempts - 1:
+            if (attempt_number + 1) >= max_number_attempts:
                 self.message(rf"INFO: Retrying in {retry_delay_seconds} seconds")
                 time.sleep(retry_delay_seconds)
                 continue
