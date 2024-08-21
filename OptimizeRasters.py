@@ -5116,7 +5116,7 @@ class Compression(object):
         return self._call_external(args, name=sourcePath, method=TimeIt.Overview, store=self._base)
 
     @TimeIt.timeOperation
-    def _call_external(self, args, max_number_attempts=5, retry_delay_seconds=1):
+    def _call_external(self, args):
         """
         Typically runs gdal_translate.exe or gdaladdo.exe with the supplied arguments
         Appends GDAL stdout to messages
@@ -5128,7 +5128,10 @@ class Compression(object):
             args[0] = tmpELF
 
         args = ' '.join(args)
-        self.message(rf"INFO: Compression._call_external({args})")
+        self.message(rf"INFO: Compression._call_external args = {args}")
+
+        max_number_attempts=5
+        retry_delay_seconds=1
 
         for attempt_number in range(max_number_attempts):
             completedProcess = subprocess.run(args, capture_output=True)
