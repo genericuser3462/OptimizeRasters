@@ -51,6 +51,7 @@ import mmap
 import base64
 import os
 import sys
+import re
 
 
 def getBooleanValue(value):
@@ -1426,24 +1427,56 @@ class GDALInfo(object):
         return _steps
 
     def _call_external(self, args):
-        p = subprocess.Popen(' '.join(args), shell=True,
-                             stdout=subprocess.PIPE)
-        message = '/'
-        CSIZE_PREFIX = b'Size is'
-        while (message):
-            message = p.stdout.readline()
-            if (message):
-                _strip = message.strip()
-                if (_strip.find(CSIZE_PREFIX) != -1):
-                    wh = _strip.split(CSIZE_PREFIX)
-                    if (len(wh) > 1):
-                        wh = wh[1].split(b',')
-                        if (self.CW in self._propertyNames):
-                            self.width = int(wh[0].strip())
-                        if (self.CH in self._propertyNames):
-                            self.height = int(wh[1].strip())
-                self._GDALInfo.append(_strip)
-        return len(self._GDALInfo) > 0
+        """
+        Typically runs gdalinfo.exe with the supplied arguments
+        Appends GDAL stdout to messages
+        If return code for output of subprocess.run is not 0 this indicates an error, so the code waits and retries
+        """
+
+        args = ' '.join(args)
+        self.message(rf"INFO: GDALInfo._call_external args = {args}")
+
+        max_number_attempts=5
+        retry_delay_seconds=1
+
+        for attempt_number in range(max_number_attempts):
+            completedProcess = subprocess.run(args, capture_output=True)
+            self.message(rf"INFO: Attempt {attempt_number} return code = {completedProcess.returncode}")
+            if completedProcess.returncode == 0:
+                self.message(rf"INFO: subprocess succeeded after {attempt_number} attempts")
+                break
+
+            self.message(rf"return code indicates error. stderr = {completedProcess.stderr}")
+
+            if (attempt_number + 1) >= max_number_attempts:
+                self.message(rf"INFO: Retrying in {retry_delay_seconds} seconds")
+                time.sleep(retry_delay_seconds)
+                continue
+
+            raise subprocess.CalledProcessError(completedProcess.returncode, args, completedProcess.stderr)
+
+        self.message(rf"INFO: GDAL COMPRESSION succeeded after {attempt_number + 1} attempts")
+        # note that the stdout from gdalinfo prints a lot of unwanted image info, so we don't add it to messages
+
+        stdout_decoded = completedProcess.stdout.decode()
+        CSIZE_regex_match = 'Size is (\d*), (\d*)'
+        self.message(rf"Searching stdout for regex match {CSIZE_regex_match} to determine height and width")
+        width_and_height_matches = re.search(CSIZE_regex_match, stdout_decoded)
+
+        # I don't really like this but I'm trying to mimic the original functionality as closely as possible
+        if (self.CW in self._propertyNames):
+            if not width_and_height_matches:
+                raise Exception(rf"Failed to find regex match {CSIZE_regex_match} in stdout")
+            self.width = int(width_and_height_matches.groups()[0])
+            self.message(rf"self.width set to {self.width}")
+
+        if (self.CH in self._propertyNames):
+            if not width_and_height_matches:
+                raise Exception(rf"Failed to find regex match {CSIZE_regex_match} in stdout")
+            self.height = int(width_and_height_matches.groups()[1])
+            self.message(rf"self.height set to {self.height}")
+
+        return True
 
 
 class UpdateMRF:
