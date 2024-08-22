@@ -1441,14 +1441,12 @@ class GDALInfo(object):
         max_number_attempts=5
         retry_delay_seconds=1
 
-        for attempt_number in range(max_number_attempts):
+        for attempt_number in range(1, max_number_attempts + 1):
             completedProcess = subprocess.run(args, capture_output=True)
-            self.message(rf"INFO: Attempt {attempt_number} return code = {completedProcess.returncode}")
             if completedProcess.returncode == 0:
-                self.message(rf"INFO: subprocess succeeded after {attempt_number} attempts")
                 break
 
-            self.message(rf"return code indicates error. stderr = {completedProcess.stderr}")
+            self.message(rf"WARN: Attempt {attempt_number}: subprocess.run() return code indicates error. stderr = {completedProcess.stderr}")
 
             if (attempt_number) <= max_number_attempts:
                 self.message(rf"INFO: Retrying in {retry_delay_seconds} seconds")
@@ -1457,26 +1455,26 @@ class GDALInfo(object):
 
             raise subprocess.CalledProcessError(completedProcess.returncode, args, completedProcess.stderr)
 
-        self.message(rf"INFO: GDAL COMPRESSION succeeded after {attempt_number + 1} attempts")
+        self.message(rf"INFO: GDALInfo._call_external succeeded after {attempt_number} attempts")
         # stdout from gdalinfo prints a lot of unwanted image info, so we don't add it to messages
 
         stdout_decoded = completedProcess.stdout.decode()
         CSIZE_regex_match = 'Size is (\d*), (\d*)'
-        self.message(rf"Searching stdout for regex match {CSIZE_regex_match} to determine height and width")
+        # self.message(rf"INFO: Searching stdout for regex match {CSIZE_regex_match} to determine height and width")
         width_and_height_matches = re.search(CSIZE_regex_match, stdout_decoded)
 
         # I don't really like this but I'm trying to mimic the original functionality as closely as possible
         if (self.CW in self._propertyNames):
             if not width_and_height_matches:
-                raise Exception(rf"Failed to find regex match {CSIZE_regex_match} in stdout")
+                raise Exception(rf"ERROR: Failed to find regex match {CSIZE_regex_match} in stdout")
             self.width = int(width_and_height_matches.groups()[0])
-            self.message(rf"self.width set to {self.width}")
+            self.message(rf"INFO: self.width set to {self.width}")
 
         if (self.CH in self._propertyNames):
             if not width_and_height_matches:
-                raise Exception(rf"Failed to find regex match {CSIZE_regex_match} in stdout")
+                raise Exception(rf"ERROR: Failed to find regex match {CSIZE_regex_match} in stdout")
             self.height = int(width_and_height_matches.groups()[1])
-            self.message(rf"self.height set to {self.height}")
+            self.message(rf"INFO: self.height set to {self.height}")
 
         return True
 
@@ -5172,12 +5170,12 @@ class Compression(object):
         max_number_attempts=5
         retry_delay_seconds=1
 
-        for attempt_number in range(max_number_attempts):
+        for attempt_number in range(1, max_number_attempts + 1):
             completedProcess = subprocess.run(args, capture_output=True)
             if completedProcess.returncode == 0:
                 break
 
-            self.message(rf"Attempt {attempt_number + 1}: subprocess.run() return code indicates error. stderr = {completedProcess.stderr}")
+            self.message(rf"WARN: Attempt {attempt_number}: subprocess.run() return code indicates error. stderr = {completedProcess.stderr}")
 
             if (attempt_number) <= max_number_attempts:
                 self.message(rf"INFO: Retrying in {retry_delay_seconds} seconds")
@@ -5187,9 +5185,9 @@ class Compression(object):
             # TODO do we need to print stdout if we hit the below error?
             raise subprocess.CalledProcessError(completedProcess.returncode, args, completedProcess.stderr)
 
-        self.message('completedProcess stdout messages:')
+        self.message('INFO: completedProcess stdout messages:')
         [self.message(m) for m in completedProcess.stdout.splitlines()]
-        self.message(rf"INFO: Compression._call_external succeeded after {attempt_number + 1} attempts")
+        self.message(rf"INFO: Compression._call_external succeeded after {attempt_number} attempts")
         return True
 
 class BundleMaker(Compression):
