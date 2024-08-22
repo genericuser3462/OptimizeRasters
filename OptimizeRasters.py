@@ -1426,7 +1426,7 @@ class GDALInfo(object):
             _steps), self._base.const_general_text)
         return _steps
 
-    def _call_external(self, args, **kwargs):
+    def _call_external(self, args):
         """
         Typically runs gdalinfo.exe with the supplied arguments
         Appends GDAL stdout to messages
@@ -5151,7 +5151,7 @@ class Compression(object):
         return self._call_external(args, name=sourcePath, method=TimeIt.Overview, store=self._base)
 
     @TimeIt.timeOperation
-    def _call_external(self, args):
+    def _call_external(self, args, **kwargs):
         """
         Typically runs gdal_translate.exe or gdaladdo.exe with the supplied arguments
         Appends GDAL stdout to messages
