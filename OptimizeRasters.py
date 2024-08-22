@@ -1433,6 +1433,8 @@ class GDALInfo(object):
         If return code for output of subprocess.run is not 0 this indicates an error, so the code waits and retries
         """
 
+        # TODO update messaging to match Compression._call_external()
+
         args = ' '.join(args)
         self.message(rf"INFO: GDALInfo._call_external args = {args}")
 
@@ -5155,7 +5157,7 @@ class Compression(object):
         Appends GDAL stdout to messages
         If return code for output of subprocess.run is not 0 this indicates an error, so the code waits and retries
 
-        NOTE: parameter messageCallback=None has been removed as it didn't appear to do anything
+        NOTE: parameter messageCallback=None has been removed as it didn't appear to do anything      
         """
 
         if (CRUN_IN_AWSLAMBDA):
@@ -5170,25 +5172,22 @@ class Compression(object):
 
         for attempt_number in range(max_number_attempts):
             completedProcess = subprocess.run(args, capture_output=True)
-            self.message(rf"INFO: Attempt {attempt_number} return code = {completedProcess.returncode}")
             if completedProcess.returncode == 0:
-                self.message(rf"INFO: subprocess succeeded after {attempt_number} attempts")
                 break
 
-            self.message(rf"return code indicates error. stderr = {completedProcess.stderr}")
+            self.message(rf"Attempt {attempt_number + 1}: subprocess.run() return code indicates error. stderr = {completedProcess.stderr}")
 
             if (attempt_number + 1) >= max_number_attempts:
                 self.message(rf"INFO: Retrying in {retry_delay_seconds} seconds")
                 time.sleep(retry_delay_seconds)
                 continue
 
+            # TODO do we need to print stdout if we hit the below error?
             raise subprocess.CalledProcessError(completedProcess.returncode, args, completedProcess.stderr)
 
-        self.message(rf"INFO: GDAL COMPRESSION succeeded after {attempt_number + 1} attempts")
-        messages = completedProcess.stdout.splitlines()
-        self.message('messages:')
-        [self.message(m) for m in messages]
-
+        self.message('completedProcess stdout messages:')
+        [self.message(m) for m in completedProcess.stdout.splitlines()]
+        self.message(rf"INFO: Compression._call_external succeeded after {attempt_number + 1} attempts")
         return True
 
 class BundleMaker(Compression):
