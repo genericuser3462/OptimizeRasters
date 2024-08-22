@@ -1,2 +1,8 @@
 /logs/*
 /run_OptimizeRasters.py
+CheckForUpdate.json
+debug.log
+.vscode/launch.json
+/SolutionsLog/__pycache__
+/CheckForUpdate.json
+Templates/SDMS*
