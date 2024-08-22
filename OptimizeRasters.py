@@ -1426,11 +1426,13 @@ class GDALInfo(object):
             _steps), self._base.const_general_text)
         return _steps
 
-    def _call_external(self, args):
+    def _call_external(self, args, **kwargs):
         """
         Typically runs gdalinfo.exe with the supplied arguments
         Appends GDAL stdout to messages
         If return code for output of subprocess.run is not 0 this indicates an error, so the code waits and retries
+
+        NOTE: parameter messageCallback=None has been removed as it didn't appear to do anything
         """
 
         args = ' '.join(args)
