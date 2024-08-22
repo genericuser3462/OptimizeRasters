@@ -1,3 +1,4 @@
+# TODO: review before raising PRs
 /logs/*
 /run_OptimizeRasters.py
 CheckForUpdate.json
