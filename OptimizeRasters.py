@@ -14,7 +14,7 @@
 # ------------------------------------------------------------------------------
 # Name: OptimizeRasters.py
 # Description: Optimizes rasters via gdal_translate/gdaladdo
-# Version: 20240430
+# Version: 20240430 # TODO
 # Requirements: Python
 # Required Arguments: -input -output
 # Optional Arguments: -mode -cache -config -quality -prec -pyramids
@@ -5443,7 +5443,7 @@ def makedirs(filepath):
 
 
 class Application(object):
-    __program_ver__ = 'v2.0.11'
+    __program_ver__ = 'v2.0.11' # TODO why is this not in sync with the github release version 2.3.0 on Esri's OptimizeRasters github repo?
     __program_date__ = '20240430'
     __program_name__ = 'OptimizeRasters.py {}/{}'.format(
         __program_ver__, __program_date__)
