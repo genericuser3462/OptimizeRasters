@@ -1433,7 +1433,7 @@ class GDALInfo(object):
         If return code for output of subprocess.run is not 0 this indicates an error, so the code waits and retries
         """
 
-        # TODO update messaging to match Compression._call_external()
+        # TODO compare log output size vs Esri\OptimizeRasters
 
         args = ' '.join(args)
         self.message(rf"INFO: GDALInfo._call_external args = {args}")
@@ -1458,7 +1458,7 @@ class GDALInfo(object):
             raise subprocess.CalledProcessError(completedProcess.returncode, args, completedProcess.stderr)
 
         self.message(rf"INFO: GDAL COMPRESSION succeeded after {attempt_number + 1} attempts")
-        # note that the stdout from gdalinfo prints a lot of unwanted image info, so we don't add it to messages
+        # stdout from gdalinfo prints a lot of unwanted image info, so we don't add it to messages
 
         stdout_decoded = completedProcess.stdout.decode()
         CSIZE_regex_match = 'Size is (\d*), (\d*)'
@@ -5159,6 +5159,8 @@ class Compression(object):
 
         NOTE: parameter messageCallback=None has been removed as it didn't appear to do anything      
         """
+
+        # TODO compare log output size vs Esri\OptimizeRasters
 
         if (CRUN_IN_AWSLAMBDA):
             tmpELF = '/tmp/{}'.format(os.path.basename(args[0]))
