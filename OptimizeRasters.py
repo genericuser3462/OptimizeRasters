@@ -1456,14 +1456,14 @@ class GDALInfo(object):
             raise subprocess.CalledProcessError(completedProcess.returncode, args, completedProcess.stderr)
 
         self.message(rf"INFO: GDALInfo._call_external succeeded after {attempt_number} attempts")
-        # stdout from gdalinfo prints a lot of unwanted image info, so we don't add it to messages
+        
+        # INFO: stdout from gdalinfo prints a lot of unwanted image info, so we don't add it to messages
 
         stdout_decoded = completedProcess.stdout.decode()
         CSIZE_regex_match = 'Size is (\d*), (\d*)'
-        # self.message(rf"INFO: Searching stdout for regex match {CSIZE_regex_match} to determine height and width")
         width_and_height_matches = re.search(CSIZE_regex_match, stdout_decoded)
 
-        # I don't really like this but I'm trying to mimic the original functionality as closely as possible
+        # I don't really like this but I'm trying to avoid breaking original functionality
         if (self.CW in self._propertyNames):
             if not width_and_height_matches:
                 raise Exception(rf"ERROR: Failed to find regex match {CSIZE_regex_match} in stdout")
