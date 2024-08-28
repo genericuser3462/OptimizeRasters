@@ -5443,8 +5443,8 @@ def makedirs(filepath):
 
 
 class Application(object):
-    __program_ver__ = 'v2.0.11' # TODO why is this not in sync with the github release version 2.3.0 on Esri's OptimizeRasters github repo?
-    __program_date__ = '20240430'
+    __program_ver__ = 'v2.4.0' # TODO this was 2.0.11 despite being part of the 2.3.0 released on github
+    __program_date__ = '20240430' # TODO what's the point of this?
     __program_name__ = 'OptimizeRasters.py {}/{}'.format(
         __program_ver__, __program_date__)
     __program_desc__ = 'Convert raster formats to a valid output format through GDAL_Translate.\n' + \
