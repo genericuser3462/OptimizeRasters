@@ -14,7 +14,7 @@
 # ------------------------------------------------------------------------------
 # Name: OptimizeRasters.py
 # Description: Optimizes rasters via gdal_translate/gdaladdo
-# Version: 20240430
+# Version: 20240430 # TODO
 # Requirements: Python
 # Required Arguments: -input -output
 # Optional Arguments: -mode -cache -config -quality -prec -pyramids
@@ -51,6 +51,7 @@ import mmap
 import base64
 import os
 import sys
+import re
 
 
 def getBooleanValue(value):
@@ -1426,24 +1427,56 @@ class GDALInfo(object):
         return _steps
 
     def _call_external(self, args):
-        p = subprocess.Popen(' '.join(args), shell=True,
-                             stdout=subprocess.PIPE)
-        message = '/'
-        CSIZE_PREFIX = b'Size is'
-        while (message):
-            message = p.stdout.readline()
-            if (message):
-                _strip = message.strip()
-                if (_strip.find(CSIZE_PREFIX) != -1):
-                    wh = _strip.split(CSIZE_PREFIX)
-                    if (len(wh) > 1):
-                        wh = wh[1].split(b',')
-                        if (self.CW in self._propertyNames):
-                            self.width = int(wh[0].strip())
-                        if (self.CH in self._propertyNames):
-                            self.height = int(wh[1].strip())
-                self._GDALInfo.append(_strip)
-        return len(self._GDALInfo) > 0
+        """
+        Typically runs gdalinfo.exe with the supplied arguments
+        Appends GDAL stdout to messages
+        If return code for output of subprocess.run is not 0 this indicates an error, so the code waits and retries
+        """
+
+        # TODO compare log output size vs Esri\OptimizeRasters
+
+        args = ' '.join(args)
+        self.message(rf"INFO: GDALInfo._call_external args = {args}")
+
+        max_number_attempts=5
+        retry_delay_seconds=1
+
+        for attempt_number in range(1, max_number_attempts + 1):
+            completedProcess = subprocess.run(args, capture_output=True)
+            if completedProcess.returncode == 0:
+                break
+
+            self.message(rf"WARN: Attempt {attempt_number}: subprocess.run() return code indicates error. stderr = {completedProcess.stderr}")
+
+            if (attempt_number) <= max_number_attempts:
+                self.message(rf"INFO: Retrying in {retry_delay_seconds} seconds")
+                time.sleep(retry_delay_seconds)
+                continue
+
+            raise subprocess.CalledProcessError(completedProcess.returncode, args, completedProcess.stderr)
+
+        self.message(rf"INFO: GDALInfo._call_external succeeded after {attempt_number} attempts")
+        
+        # INFO: stdout from gdalinfo prints a lot of unwanted image info, so we don't add it to messages
+
+        stdout_decoded = completedProcess.stdout.decode()
+        CSIZE_regex_match = 'Size is (\d*), (\d*)'
+        width_and_height_matches = re.search(CSIZE_regex_match, stdout_decoded)
+
+        # I don't really like this but I'm trying to avoid breaking original functionality
+        if (self.CW in self._propertyNames):
+            if not width_and_height_matches:
+                raise Exception(rf"ERROR: Failed to find regex match {CSIZE_regex_match} in stdout")
+            self.width = int(width_and_height_matches.groups()[0])
+            self.message(rf"INFO: self.width set to {self.width}")
+
+        if (self.CH in self._propertyNames):
+            if not width_and_height_matches:
+                raise Exception(rf"ERROR: Failed to find regex match {CSIZE_regex_match} in stdout")
+            self.height = int(width_and_height_matches.groups()[1])
+            self.message(rf"INFO: self.height set to {self.height}")
+
+        return True
 
 
 class UpdateMRF:
@@ -5116,48 +5149,46 @@ class Compression(object):
         return self._call_external(args, name=sourcePath, method=TimeIt.Overview, store=self._base)
 
     @TimeIt.timeOperation
-    def _call_external(self, args, messageCallback=None, **kwargs):
+    def _call_external(self, args, **kwargs):
+        """
+        Typically runs gdal_translate.exe or gdaladdo.exe with the supplied arguments
+        Appends GDAL stdout to messages
+        If return code for output of subprocess.run is not 0 this indicates an error, so the code waits and retries
+
+        NOTE: parameter messageCallback=None has been removed as it didn't appear to do anything      
+        """
+
+        # TODO compare log output size vs Esri\OptimizeRasters
+
         if (CRUN_IN_AWSLAMBDA):
             tmpELF = '/tmp/{}'.format(os.path.basename(args[0]))
             args[0] = tmpELF
-        p = subprocess.Popen(' '.join(args), shell=True,
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        message = ''
-        messages = []
-        val = p.poll()
-        while (val is None):
-            time.sleep(0.5)
-            val = p.poll()
-            message = p.stdout.readline()
-            if (message):
-                messages.append(message.strip())
-        if (messages):
-            self.message('messages:')
-            for m in messages:
-                self.message(m)
-        if (not p.stderr):
-            return True
-        warnings = p.stderr.readlines()
-        if (warnings):
-            self.message('warnings/errors:')
-            is_error = False
-            for w in warnings:
-                w = w.strip()
-                if (isinstance(w, bytes)):
-                    w = bytes.decode(w)
-                if (not is_error):
-                    if (w.find('ERROR') >= 0):
-                        is_error = True
-                        if (w.find('ECW') >= 0 and
-                                self._base.isLinux()):   # temp fix to get rid of (no version information available) warnings for .so under linux
-                            is_error = False
-                self.message(w)
-                if (messageCallback):
-                    messageCallback(w)
-            if (is_error):
-                return False
-        return True
 
+        args = ' '.join(args)
+        self.message(rf"INFO: Compression._call_external args = {args}")
+
+        max_number_attempts=5
+        retry_delay_seconds=1
+
+        for attempt_number in range(1, max_number_attempts + 1):
+            completedProcess = subprocess.run(args, capture_output=True)
+            if completedProcess.returncode == 0:
+                break
+
+            self.message(rf"WARN: Attempt {attempt_number}: subprocess.run() return code indicates error. stderr = {completedProcess.stderr}")
+
+            if (attempt_number) <= max_number_attempts:
+                self.message(rf"INFO: Retrying in {retry_delay_seconds} seconds")
+                time.sleep(retry_delay_seconds)
+                continue
+
+            # TODO do we need to print stdout if we hit the below error?
+            raise subprocess.CalledProcessError(completedProcess.returncode, args, completedProcess.stderr)
+
+        self.message('INFO: completedProcess stdout messages:')
+        [self.message(m) for m in completedProcess.stdout.splitlines()]
+        self.message(rf"INFO: Compression._call_external succeeded after {attempt_number} attempts")
+        return True
 
 class BundleMaker(Compression):
 
@@ -5412,8 +5443,8 @@ def makedirs(filepath):
 
 
 class Application(object):
-    __program_ver__ = 'v2.0.11'
-    __program_date__ = '20240430'
+    __program_ver__ = 'v2.4.0' # TODO this was 2.0.11 despite being part of the 2.3.0 released on github
+    __program_date__ = '20240430' # TODO what's the point of this?
     __program_name__ = 'OptimizeRasters.py {}/{}'.format(
         __program_ver__, __program_date__)
     __program_desc__ = 'Convert raster formats to a valid output format through GDAL_Translate.\n' + \
