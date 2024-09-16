@@ -1448,7 +1448,7 @@ class GDALInfo(object):
 
             self.message(rf"WARN: Attempt {attempt_number}: subprocess.run() return code indicates error. stderr = {completedProcess.stderr}")
 
-            if (attempt_number) <= max_number_attempts:
+            if (attempt_number) < max_number_attempts:
                 self.message(rf"INFO: Retrying in {retry_delay_seconds} seconds")
                 time.sleep(retry_delay_seconds)
                 continue
@@ -5177,7 +5177,7 @@ class Compression(object):
 
             self.message(rf"WARN: Attempt {attempt_number}: subprocess.run() return code indicates error. stderr = {completedProcess.stderr}")
 
-            if (attempt_number) <= max_number_attempts:
+            if (attempt_number) < max_number_attempts:
                 self.message(rf"INFO: Retrying in {retry_delay_seconds} seconds")
                 time.sleep(retry_delay_seconds)
                 continue
@@ -5443,7 +5443,7 @@ def makedirs(filepath):
 
 
 class Application(object):
-    __program_ver__ = 'v2.4.0' # TODO this was 2.0.11 despite being part of the 2.3.0 released on github
+    __program_ver__ = 'v2.4.1' # TODO this was 2.0.11 despite being part of the 2.3.0 released on github
     __program_date__ = '20240430' # TODO what's the point of this?
     __program_name__ = 'OptimizeRasters.py {}/{}'.format(
         __program_ver__, __program_date__)
