@@ -1448,7 +1448,7 @@ class GDALInfo(object):
 
             self.message(rf"WARN: Attempt {attempt_number}: subprocess.run() return code indicates error. stderr = {completedProcess.stderr}")
 
-            if (attempt_number) <= max_number_attempts:
+            if (attempt_number) < max_number_attempts:
                 self.message(rf"INFO: Retrying in {retry_delay_seconds} seconds")
                 time.sleep(retry_delay_seconds)
                 continue
@@ -5177,7 +5177,7 @@ class Compression(object):
 
             self.message(rf"WARN: Attempt {attempt_number}: subprocess.run() return code indicates error. stderr = {completedProcess.stderr}")
 
-            if (attempt_number) <= max_number_attempts:
+            if (attempt_number) < max_number_attempts:
                 self.message(rf"INFO: Retrying in {retry_delay_seconds} seconds")
                 time.sleep(retry_delay_seconds)
                 continue
